@@ -50,6 +50,8 @@ extension BuildPlan {
                 buildProduct.additionalFlags += ["-framework", binaryPath.basenameWithoutExt]
             } else if binaryPath.basename.starts(with: "lib") {
                 buildProduct.additionalFlags += ["-l\(binaryPath.basenameWithoutExt.dropFirst(3))"]
+            } else if binaryPath.extension == "lib" {
+                buildProduct.additionalFlags += ["-l\(binaryPath.basenameWithoutExt)"]
             } else {
                 self.observabilityScope.emit(error: "unexpected binary framework")
             }
