@@ -21,10 +21,10 @@ public final class BinaryModule: Module {
 
     /// The kind of binary artifact.
     public let kind: Kind
-    
+
     /// The original source of the binary artifact.
     public let origin: Origin
-    
+
     /// The binary artifact path.
     public var artifactPath: AbsolutePath {
         return self.sources.root
@@ -55,6 +55,7 @@ public final class BinaryModule: Module {
 
     public enum Kind: String, RawRepresentable, CaseIterable {
         case xcframework
+        case libraryArchive
         case artifactsArchive
         case unknown // for non-downloaded artifacts
 
@@ -62,7 +63,7 @@ public final class BinaryModule: Module {
             switch self {
             case .xcframework:
                 return "xcframework"
-            case .artifactsArchive:
+            case .artifactsArchive, .libraryArchive:
                 return "artifactbundle"
             case .unknown:
                 return "unknown"

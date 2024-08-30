@@ -26,6 +26,7 @@ import class PackageModel.SwiftModule
 import class PackageModel.SystemLibraryModule
 import struct SPMBuildCore.BuildParameters
 import struct SPMBuildCore.ExecutableInfo
+import struct SPMBuildCore.LibraryInfo
 import func TSCBasic.topologicalSort
 
 extension BuildPlan {
@@ -297,10 +298,21 @@ extension BuildPlan {
                             libraryBinaryPaths.insert(library.libraryPath)
                         }
                     case .artifactsArchive:
-                        let tools = try self.parseArtifactsArchive(
-                            for: binaryTarget, triple: productDescription.buildParameters.triple
+                        let tools = try self.parseExecutableArtifactsArchive(
+                            for: binaryTarget,
+                            triple: productDescription.buildParameters.triple
                         )
-                        tools.forEach { availableTools[$0.name] = $0.executablePath }
+                        for tool in tools {
+                            availableTools[tool.name] = tool.executablePath
+                        }
+                    case .libraryArchive:
+                        let libraries = try self.parseLibraryArtifactsArchive(
+                            for: binaryTarget,
+                            triple: productDescription.buildParameters.triple
+                        )
+                        for library in libraries {
+                            libraryBinaryPaths.insert(library.libraryPath)
+                        }
                     case .unknown:
                         throw InternalError("unknown binary target '\(module.name)' type")
                     }
@@ -329,11 +341,17 @@ extension BuildPlan {
         return (linkLibraries, staticTargets, systemModules, libraryBinaryPaths, availableTools)
     }
 
-    /// Extracts the artifacts  from an artifactsArchive
-    private func parseArtifactsArchive(for binaryTarget: BinaryModule, triple: Triple) throws -> [ExecutableInfo] {
+    /// Extracts the executable artifacts from an `.artifactbundle`.
+    func parseExecutableArtifactsArchive(for binaryTarget: BinaryModule, triple: Triple) throws -> [ExecutableInfo] {
         try self.externalExecutablesCache.memoize(key: binaryTarget) {
-            let execInfos = try binaryTarget.parseArtifactArchives(for: triple, fileSystem: self.fileSystem)
+            let execInfos = try binaryTarget.parseExecutableArtifactArchives(for: triple, fileSystem: self.fileSystem)
             return execInfos.filter { !$0.supportedTriples.isEmpty }
+        }
+    }
+
+    func parseLibraryArtifactsArchive(for target: BinaryModule, triple: Triple) throws -> [LibraryInfo] {
+        try self.externalLibrariesCache.memoize(key: target) {
+            try target.parseLibraryArtifactArchives(for: triple, fileSystem: self.fileSystem)
         }
     }
 }

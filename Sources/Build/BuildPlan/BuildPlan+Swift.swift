@@ -39,7 +39,8 @@ extension BuildPlan {
                 swiftTarget.additionalFlags += ["-Xcc", "-fmodule-map-file=\(target.moduleMapPath.pathString)"]
                 swiftTarget.additionalFlags += try pkgConfig(for: target).cFlags
             case let target as BinaryModule:
-                if case .xcframework = target.kind {
+                switch target.kind {
+                case .xcframework:
                     let libraries = try self.parseXCFramework(for: target, triple: swiftTarget.buildParameters.triple)
                     for library in libraries {
                         library.headersPaths.forEach {
@@ -47,6 +48,19 @@ extension BuildPlan {
                         }
                         swiftTarget.libraryBinaryPaths.insert(library.libraryPath)
                     }
+                case .libraryArchive:
+                    let libraries = try self.parseLibraryArtifactsArchive(for: target, triple: swiftTarget.buildParameters.triple)
+                    for library in libraries {
+                        library.headersPaths.forEach {
+                            swiftTarget.additionalFlags += ["-I", $0.pathString, "-Xcc", "-I", "-Xcc", $0.pathString]
+                        }
+                        swiftTarget.libraryBinaryPaths.insert(library.libraryPath)
+                        if let moduleMapPath = library.moduleMapPath {
+                            swiftTarget.additionalFlags += ["-Xcc", "-fmodule-map-file=\(moduleMapPath)"]
+                        }
+                    }
+                    
+                default: break
                 }
             default:
                 break

@@ -22,6 +22,9 @@ public struct LibraryInfo: Equatable {
 
     /// The paths to the headers directories.
     public let headersPaths: [AbsolutePath]
+
+    /// The path to the module map of this library.
+    public let moduleMapPath: AbsolutePath?
 }
 
 /// Information about an executable from a binary dependency.
@@ -53,10 +56,15 @@ extension BinaryModule {
         let libraryFile = try AbsolutePath(validating: library.libraryPath, relativeTo: libraryDir)
         let headersDirs = try library.headersPath
             .map { [try AbsolutePath(validating: $0, relativeTo: libraryDir)] } ?? [] + [libraryDir]
-        return [LibraryInfo(libraryPath: libraryFile, headersPaths: headersDirs)]
+        return [LibraryInfo(libraryPath: libraryFile, headersPaths: headersDirs, moduleMapPath: nil)]
     }
 
-    public func parseArtifactArchives(for triple: Triple, fileSystem: FileSystem) throws -> [ExecutableInfo] {
+    @available(*, deprecated, renamed: "parseExecutableArtifactArchives")
+    public func parseArtifactArchives(for triple: Triple, fileSystem: any FileSystem) throws -> [ExecutableInfo] {
+        try self.parseExecutableArtifactArchives(for: triple, fileSystem: fileSystem)
+    }
+
+    public func parseExecutableArtifactArchives(for triple: Triple, fileSystem: any FileSystem) throws -> [ExecutableInfo] {
         // The host triple might contain a version which we don't want to take into account here.
         let versionLessTriple = try triple.withoutVersion()
         // We return at most a single variant of each artifact.
@@ -81,6 +89,30 @@ extension BinaryModule {
                 )
             }
         }
+    }
+
+    public func parseLibraryArtifactArchives(for triple: Triple, fileSystem: any FileSystem) throws -> [LibraryInfo] {
+        let versionLessTriple = try triple.withoutVersion()
+        let metadata = try ArtifactsArchiveMetadata.parse(fileSystem: fileSystem, rootPath: self.artifactPath)
+        let libraries = metadata.artifacts.filter { $0.value.type == .library }
+
+        var result = [LibraryInfo]()
+        for library in libraries {
+            for variant in library.value.variants {
+                let hasMatchingTriple = try variant.supportedTriples?
+                    .contains { try $0.withoutVersion() == versionLessTriple } ?? false
+                if hasMatchingTriple {
+                    let libraryInfo = LibraryInfo(
+                        libraryPath: self.artifactPath.appending(variant.path),
+                        headersPaths: variant.libraryMetadata?.headerPaths.map { self.artifactPath.appending($0) } ?? [],
+                        moduleMapPath: variant.libraryMetadata?.moduleMapPath.map { self.artifactPath.appending($0) }
+                    )
+                    result.append(libraryInfo)
+                }
+                break
+            }
+        }
+        return result
     }
 }
 

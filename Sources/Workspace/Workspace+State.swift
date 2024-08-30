@@ -389,6 +389,7 @@ extension WorkspaceStateStorage {
             enum Kind: String, Codable {
                 case xcframework
                 case artifactsArchive
+                case libraryArchive
                 case unknown
 
                 init(_ underlying: BinaryModule.Kind) {
@@ -397,6 +398,8 @@ extension WorkspaceStateStorage {
                         self = .xcframework
                     case .artifactsArchive:
                         self = .artifactsArchive
+                    case .libraryArchive:
+                        self = .libraryArchive
                     case .unknown:
                         self = .unknown
                     }
@@ -408,6 +411,8 @@ extension WorkspaceStateStorage {
                         return .xcframework
                     case .artifactsArchive:
                         return .artifactsArchive
+                    case .libraryArchive:
+                        return .libraryArchive
                     case .unknown:
                         return .unknown
                     }

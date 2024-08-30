@@ -43,7 +43,8 @@ extension BuildPlan {
                 clangTarget.additionalFlags += ["-fmodule-map-file=\(target.moduleMapPath.pathString)"]
                 clangTarget.additionalFlags += try pkgConfig(for: target).cFlags
             case let target as BinaryModule:
-                if case .xcframework = target.kind {
+                switch target.kind {
+                case .xcframework:
                     let libraries = try self.parseXCFramework(for: target, triple: clangTarget.buildParameters.triple)
                     for library in libraries {
                         library.headersPaths.forEach {
@@ -51,6 +52,19 @@ extension BuildPlan {
                         }
                         clangTarget.libraryBinaryPaths.insert(library.libraryPath)
                     }
+
+                case .libraryArchive:
+                    let libraries = try self.parseLibraryArtifactsArchive(for: target, triple: clangTarget.buildParameters.triple)
+                    for library in libraries {
+                        library.headersPaths.forEach {
+                            clangTarget.additionalFlags += ["-I", $0.pathString]
+                        }
+                        clangTarget.libraryBinaryPaths.insert(library.libraryPath)
+                        if let moduleMapPath = library.moduleMapPath {
+                            clangTarget.additionalFlags += ["-fmodule-map-file=\(moduleMapPath)"]
+                        }
+                    }
+                default: break
                 }
             default: continue
             }

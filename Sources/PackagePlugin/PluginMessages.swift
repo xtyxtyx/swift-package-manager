@@ -186,6 +186,7 @@ enum HostToPluginMessage: Codable {
 
                     enum BinaryArtifactKind: Codable {
                         case xcframework
+                        case libraryArchive
                         case artifactsArchive
                     }
 
