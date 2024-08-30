@@ -91,6 +91,9 @@ extension BinaryModule {
         }
     }
 
+    /// Turn artifactbundles into a list of library infos. Only libraries that
+    /// support the given triple are returned. For each artifact, at most one
+    /// variant is returned.
     public func parseLibraryArtifactArchives(for triple: Triple, fileSystem: any FileSystem) throws -> [LibraryInfo] {
         let versionLessTriple = try triple.withoutVersion()
         let metadata = try ArtifactsArchiveMetadata.parse(fileSystem: fileSystem, rootPath: self.artifactPath)
@@ -108,8 +111,8 @@ extension BinaryModule {
                         moduleMapPath: variant.libraryMetadata?.moduleMapPath.map { self.artifactPath.appending($0) }
                     )
                     result.append(libraryInfo)
+                    break
                 }
-                break
             }
         }
         return result
